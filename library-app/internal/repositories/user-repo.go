@@ -24,15 +24,25 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 //	Si existe, mapea la fila a un struct user
 //
 // retorna objeto user, y mensaje de error
+func (r *UserRepository) Create(email, passwordHash string) error {
+	_, err := r.db.Exec(
+		"INSERT INTO users (email, password, role) VALUES ($1, $2, $3)",
+		email,
+		passwordHash,
+		"user",
+	)
+	return err
+}
+
 func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 
 	// estructura donde se guarda el usuario
 	var user models.User
 
 	err := r.db.QueryRow(
-		"SELECT id, email, role FROM users WHERE email = $1",
+		"SELECT id, email, password, role FROM users WHERE email = $1",
 		email,
-	).Scan(&user.ID, &user.Email, &user.Role)
+	).Scan(&user.ID, &user.Email, &user.Password, &user.Role)
 
 	switch err {
 

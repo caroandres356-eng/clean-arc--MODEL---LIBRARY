@@ -1,22 +1,30 @@
 package routes
 
-// enrutamiento de handlers
 import (
 	"net/http"
 
-	"library-app/internal/handlers"    // importamos paquetes de handlers
-	"library-app/internal/middlewares" // importamos paquete de middlewares
+	"library-app/internal/handlers"
+	"library-app/internal/middlewares"
 )
 
-func Register(mux *http.ServeMux, auth *handlers.AuthHandler, book *handlers.BookHandler) { // multiplexer para asignar rutas  ,  handler de logeo principal,  handlers de libro(para agregr y listar libros)
+func Register(
+	mux *http.ServeMux,
+	auth *handlers.AuthHandler,
+	book *handlers.BookHandler,
+) {
 
-	mux.HandleFunc("/login", auth.Login) //ruta inicial de logeo
+	// 🔓 RUTAS PÚBLICAS
+	mux.HandleFunc("/login", auth.Login)
+	mux.HandleFunc("/register", auth.Register)
 
-	mux.Handle("/books",
+	// 🔒 RUTAS PROTEGIDAS
+	mux.Handle(
+		"/books",
 		middlewares.Auth(http.HandlerFunc(book.List)),
-	) //para acceder a la lista de libros , primero debe tene el cotnexto asignado por el middleware con el rol
+	)
 
-	mux.Handle("/books/add",
+	mux.Handle(
+		"/books/add",
 		middlewares.Auth(http.HandlerFunc(book.Add)),
-	) //para añadir un libro primero necesito el contexto con el rol nuevamente
+	)
 }

@@ -1,19 +1,47 @@
 package middlewares
 
 import (
-	"context" //para asignar role despues de que pase por el middleware
+	"context"
 	"net/http"
 	"strings"
+
+	"library-app/internal/auth"
 )
 
-// identifica el rol de cada peticion
+type contextKey string
+
+const (
+	roleKey   contextKey = "role"
+	userIDKey contextKey = "userID"
+)
+
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		token := r.Header.Get("Authorization")             //almacena el token de la peticion
-		role := strings.TrimPrefix(token, "Bearer token-") //almacena elrol de cada peticion
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "authorization requerido", http.StatusUnauthorized)
+			return
+		}
 
-		ctx := context.WithValue(r.Context(), "role", role) //asigna el rol a el request
-		next.ServeHTTP(w, r.WithContext(ctx))               //sigue al siguiente handler le envia la respuesta del handler y el contexto con el  rol
+		// Esperamos: Bearer <token>
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			http.Error(w, "formato de token inválido", http.StatusUnauthorized)
+			return
+		}
+
+		tokenString := parts[1]
+
+		claims, err := auth.ValidateToken(tokenString)
+		if err != nil {
+			http.Error(w, "token inválido", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), userIDKey, claims.UserID)
+		ctx = context.WithValue(ctx, roleKey, claims.Role)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
